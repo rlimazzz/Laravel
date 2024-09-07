@@ -1,0 +1,402 @@
+IMPORTANTE: O compilador do php é bem ruim, então em alguns momentos pode haver um erro que o compilador 
+não explica muito bem mas pode ser um erro óbvio, então preste atenção em erros comuns.
+
+php artisan serve : roda a nossa aplicação web
+
+Rotas : É o caminho que um pedido http segue para chegar a um endpoint específico
+
+Route::get($uri, $callback)
+
+Declaramos nossas rotas com parâmetros sendo um a rota que queremos ir e o outro uma função de callback,
+podemos também declarar rotas com parâmetros que o próprio usuário pode passar ao site, como por exemplo:
+
+Route::get(
+    '/contato/{nome}/{idade}', 
+    function(string $nome = "Não informado", int $idade = 0) 
+    {
+    return "Olá $nome , com idade de : $idade anos";   
+    }
+)
+
+Observe que temos valores padrões para nossas variáveis quando não obtemos entradas do usuário, podemos também
+receber parâmetros opcionais i.e quando o usuário não informa ou quando esse parâmetro não é necessário
+para a nossa aplicação web :
+
+Route::get(
+    '/contato/{nome?}/{idade?}', 
+    function(string $nome = "Não informado", int $idade = 0) 
+    {
+    return "Olá $nome , com idade de : $idade anos";   
+    }
+)
+
+Também podemos definir uma regra para receber nossos parâmetros, por exemplo quando precisamos receber um nome
+necessitamos a definição de uma regra para o parâmetro receber apenas caracteres de A-Z ou de a-z ou seja
+maíusculos ou minúsculos, segue o código :
+
+Route::get(
+    '/contato/{nome?}/{idade?}', 
+    function(string $nome = "Não informado", int $idade = 0) 
+    {
+    return "Olá $nome , com idade de : $idade anos";   
+    }
+)->where('nome', '[A-za-z]+');
+
+Isto é chamado expressões regulares e temos várias em PHP: https://www.w3schools.com/php/php_regex.asp.
+Podemos também agrupar rotas com o uso do Route::prefix('/nome_do_agrupamento') e assim podemos deixar mais 
+organizado, segue o exemplo: 
+
+Route::prefix('/app')->group(function() {
+    Route::get('/clientes', function() {
+        return "Clientes";
+    });
+    
+    Route::get('/fornecedores', function() {
+        return "Fornecedores";
+    });
+    
+    Route::get('/produtos', function() {
+        return "Produtos";
+    });
+
+});
+
+O Laravel também nos permite a ferramenta de nomeação das rotas, assim sendo, quando mudamos o nome de uma rota
+nós não obtemos nenhum erro ou problema com essa rota, pois podemos usar um nome que vai representar essa rota 
+porém nunca vai mudar, segue o exemplo:
+
+Route::get('/', [PrincipalController::class, 'principal'])->name('site.principal');
+
+
+Route::get('/sobre', [SobreController::class, 'sobre'])->name('site.sobre');
+
+Route::get('/contato', [ContatoController::class,'contato'])->name('site.contato');
+
+Route::get('/contato/{nome?}/{idade?}', function(string $nome = "Não informado", int $idade = 0) {
+    return "Olá $nome , com idade de : $idade anos";   
+})-> where('idade', '[0-9]+')->where('nome', '[A-Za-z]+')->name('site.login');
+
+Para usarmos a nomeação ao invés da rota direta nas nossas views temos que usar da seguinte maneira :
+
+<h3>Principal (view)</h3>
+
+<ul>
+    <li>
+        <a href="{{route('site.principal')}}">Principal</a>
+    </li>
+    <li>
+        <a href="{{route('site.sobre')}}">Sobre</a>
+    </li>
+    <li>
+        <a href ="{{route('site.contato')}}">Contato</a>
+    </li>
+</ul>
+
+Podemos também redirecionar rotas e usar rotas de fallback(que é basicamente quando uma rota não existir
+encaminhar a outra existente), exemplos :
+
+Route::get('/rota1', function() {
+    return "Rota 1";
+})->name('site.rota1');
+
+
+Route::get('/rota2', function() {
+    return redirect()->route('site.rota1');
+})->name('site.rota2');
+
+Ou simplesmente :
+
+Route::redirect('/rota2', '/rota1');
+
+Rotas de callback :
+
+Route::fallback(function() {
+    echo 'A rota acessada não existe. <a href = "'.route('site.principal').'">Clique aqui</a> para voltar ao início';
+});
+
+Passando parâmetros dos controladores para views, com 3 maneiras:
+
+class TesteController extends Controller
+{
+    public function teste(int $p1, int $p2) {
+        // echo "A soma de $p1 + $p2 é = ".($p1 + $p2);
+        //return view('site.teste', ['x' => $p1,'y'=> $p2]);
+        //return view('site.teste', compact('p1', 'p2'));
+        return view('site.teste')->with('p1', $p1)->with('p2', $p2);
+    }
+}
+
+<a>Fornecedor</a>
+
+{{-- Comentários no blade são feitos assim--}}
+
+<br>
+{{-- Código puro em php no blade --}}
+@php 
+    //aqui podemos usar o que sabemos em php
+    echo 'Aqui estão nossos fornecedores';
+@endphp
+
+<br>
+@if(count($fornecedores) > 0 && count($fornecedores) < 10)
+    <a>Existem alguns fornecedores cadastrados</a>
+@elseif(count($fornecedores) >= 10)
+    <a>Existem muitos fornecedores cadastrados</a>
+@else
+    <a>Não existe nenhum fornecedor cadastrado</a>
+@endif
+<br>
+
+{{-- @unless executa se o valor for false--}}
+<h3>Fornecedor : {{$fornecedores[0]['nome']}}</h3>
+<br>
+<h3>Status : {{$fornecedores[0]['status']}}</h3>
+
+@if($fornecedores[0]['status'] == 'Ativo') 
+    <p> Fornecedor {{$fornecedores[0]['nome']}} está ativo</p>
+@endif
+
+@unless($fornecedores[0]['status'] == 'Ativo')
+    <p> Fornecedor {{$fornecedores[0]['nome']}} está inativo</p>
+@endif
+
+<h1>Fornecedores Ativos no Sistema</h1>
+
+@isset($fornecedores) 
+    @isset($fornecedores[1]['nome'])
+        <a>Fornecedor : {{$fornecedores[1]['nome'] ?? ' '}}</a>
+        @empty($fornecedores[1]['nome'])
+            <a> VAZIO </a>
+        @endempty
+    @endisset
+    <br>
+    @isset($fornecedores[1]['status'])
+        <a>Situação : {{$fornecedores[1]['status'] ?? ' '}} </a>
+        @empty($fornecedores[1]['status'])
+            <a> VAZIO </a>
+        @endempty
+    @endisset
+    <br>
+    @isset($fornecedores[1]['cnpj'])
+        <a>CNPJ : {{$fornecedores[1]['cnpj'] ?? ' '}}<a>
+        @empty($fornecedores[1]['cnpj'])
+            <a> VAZIO </a>
+        @endempty
+    @endisset
+@endisset
+
+<h1>Fornecedores Ativos no Sistema</h1>
+
+@isset($fornecedores) 
+    @for($i = 0; $i < 3;$i++)
+        <a>Fornecedor : {{$fornecedores[$i]['nome'] ?? ' '}}</a>
+        <br>
+        <a>Situação : {{$fornecedores[$i]['status'] ?? ''}} </a>
+        <br>
+        <a>CNPJ : {{$fornecedores[$i]['cnpj'] ?? 'oiii'}}<a>
+        <br>
+        <a>Telefone : {{$fornecedores[$i]['telefone'] ?? 'Indefinido'}}, DDD = {{$fornecedores[$i]['ddd']}}</a>
+        <br>
+        @switch($fornecedores[$i]['ddd'])
+            @case('11')
+                <a> Você é de São Paulo</a>
+                @break
+            @case('62')
+                <a> Você é de Goiás </a>
+                @break
+            @case('85')
+                <a> Você é de Fortaleza</a>
+                @break
+            @default
+                <a>Estado não identificado</a>
+                @break
+        @endswitch
+        <hr>
+    @endfor
+    
+@endisset
+
+<h1>Fornecedores Ativos no Sistema</h1>
+
+@isset($fornecedores) 
+
+    @php $i = 0 @endphp
+    @while(isset($fornecedores[$i]))
+        <a>Fornecedor : {{$fornecedores[$i]['nome'] ?? ' '}}</a>
+        <br>
+        <a>Situação : {{$fornecedores[$i]['status'] ?? ''}} </a>
+        <br>    
+        <a>CNPJ : {{$fornecedores[$i]['cnpj'] ?? 'oiii'}}<a>
+        <br>
+        <a>Telefone : {{$fornecedores[$i]['telefone'] ?? 'Indefinido'}}, DDD = {{$fornecedores[$i]['ddd']}}</a>
+        <br>
+        @switch($fornecedores[$i]['ddd'])
+            @case('11')
+                <a> Você é de São Paulo</a>
+                @break
+            @case('62')
+                <a> Você é de Goiás </a>
+                @break
+            @case('85')
+                <a> Você é de Fortaleza</a>
+                @break
+            @default
+                <a>Estado não identificado</a>
+                @break
+        @endswitch
+        <hr>
+        @php $i++ @endphp
+    @endwhile
+    
+@endisset
+
+
+<h1>Fornecedores Ativos no Sistema</h1>
+
+@isset($fornecedores) 
+
+    @foreach($fornecedores as $indice => $fornecedor)
+        <a>Fornecedor : {{$fornecedor['nome'] ?? ' '}}</a>
+        <br>
+        <a>Situação : {{$fornecedor['status'] ?? ''}} </a>
+        <br>    
+        <a>CNPJ : {{$fornecedor['cnpj'] ?? 'oiii'}}<a>
+        <br>
+        <a>Telefone : {{$fornecedor['telefone'] ?? 'Indefinido'}}, DDD = {{$fornecedor['ddd']}}</a>
+        <br>
+        @switch($fornecedor['ddd'])
+            @case('11')
+                <a> Você é de São Paulo</a>
+                @break
+            @case('62')
+                <a> Você é de Goiás </a>
+                @break
+            @case('85')
+                <a> Você é de Fortaleza</a>
+                @break
+            @default
+                <a>Estado não identificado</a>
+                @break
+        @endswitch
+        <hr>
+    @endforeach
+    
+@endisset
+
+<h1>Fornecedores Ativos no Sistema</h1>
+
+@isset($fornecedores) 
+
+    @forelse($fornecedores as $indice => $fornecedor)
+        <a>Fornecedor : {{$fornecedor['nome'] ?? ' '}}</a>
+        <br>
+        <a>Situação : {{$fornecedor['status'] ?? ''}} </a>
+        <br>    
+        <a>CNPJ : {{$fornecedor['cnpj'] ?? 'oiii'}}<a>
+        <br>
+        <a>Telefone : {{$fornecedor['telefone'] ?? 'Indefinido'}}, DDD = {{$fornecedor['ddd']}}</a>
+        <br>
+        @switch($fornecedor['ddd'])
+            @case('11')
+                <a> Você é de São Paulo</a>
+                @break
+            @case('62')
+                <a> Você é de Goiás </a>
+                @break
+            @case('85')
+                <a> Você é de Fortaleza</a>
+                @break
+            @default
+                <a>Estado não identificado</a>
+                @break
+        @endswitch
+        <hr>
+
+        @empty
+            Não existem pessoas cadastradas!!!
+    @endforelse
+    
+@endisset
+
+<h1>Fornecedores Ativos no Sistema</h1>
+
+@isset($fornecedores) 
+
+    @forelse($fornecedores as $indice => $fornecedor)
+        <a>Fornecedor : @{{$fornecedor['nome'] ?? ' '}}</a>
+        <br>
+        <a>Situação : @{{$fornecedor['status'] ?? ''}} </a>
+        <br>    
+        <a>CNPJ : @{{$fornecedor['cnpj'] ?? 'oiii'}}<a>
+        <br>
+        <a>Telefone : @{{$fornecedor['telefone'] ?? 'Indefinido'}}, DDD = {{$fornecedor['ddd']}}</a>
+        <br>
+        @switch($fornecedor['ddd'])
+            @case('11')
+                <a> Você é de São Paulo</a>
+                @break
+            @case('62')
+                <a> Você é de Goiás </a>
+                @break
+            @case('85')
+                <a> Você é de Fortaleza</a>
+                @break
+            @default
+                <a>Estado não identificado</a>
+                @break
+        @endswitch
+        <hr>
+
+        @empty
+            Não existem pessoas cadastradas!!!
+    @endforelse
+    
+@endisset
+
+<h1>Fornecedores Ativos no Sistema</h1>
+
+@isset($fornecedores) 
+
+    @forelse($fornecedores as $indice => $fornecedor)
+        Iteração atual : {{$loop -> iteration}}
+        <br>
+        <a>Fornecedor : {{$fornecedor['nome'] ?? ' '}}</a>
+        <br>
+        <a>Situação : {{$fornecedor['status'] ?? ''}} </a>
+        <br>    
+        <a>CNPJ : {{$fornecedor['cnpj'] ?? 'oiii'}}<a>
+        <br>
+        <a>Telefone : {{$fornecedor['telefone'] ?? 'Indefinido'}}, DDD = {{$fornecedor['ddd']}}</a>
+        <br>
+        @switch($fornecedor['ddd'])
+            @case('11')
+                <a> Você é de São Paulo</a>
+                @break
+            @case('62')
+                <a> Você é de Goiás </a>
+                @break
+            @case('85')
+                <a> Você é de Fortaleza</a>
+                @break
+            @default
+                <a>Estado não identificado</a>
+                @break
+        @endswitch
+        <br>
+        @if($loop -> first) 
+            Primeira iteração do loop
+        @elseif($loop -> last) 
+            Ultima iteração do loop
+            <br> 
+
+            Total de clientes {{$loop -> count}}
+        @endif
+        <hr>
+
+        @empty
+            Não existem pessoas cadastradas!!!
+    @endforelse
+    
+@endisset
+
+Asset é tudo que complementa o frontend!
